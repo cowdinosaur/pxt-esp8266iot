@@ -76,7 +76,7 @@ MIT
 (The metadata above is needed for package search.)
 
 ```package
-esp8266=github:elecfreaks/pxt-esp8266iot
+esp8266=github:cowdinosaur/pxt-esp8266iot
 ```
 
 

@@ -1,5 +1,8 @@
 //% color=#0fbc11 icon="\uf1eb"
 namespace ESP8266_IoT {
+
+    OLED.init(128, 64)
+
     let CMD = 0
     let wifi_connected: boolean = false
     let thingspeak_connected: boolean = false
@@ -13,6 +16,7 @@ namespace ESP8266_IoT {
     let mqtthost_def = "ELECFREAKS"
     let iftttkey_def = ""
     let iftttevent_def = ""
+    let receivedData : string = ""
 
     export enum stateList {
         //% block="on"
@@ -23,6 +27,10 @@ namespace ESP8266_IoT {
     let TStoSendStr = ""
     serial.onDataReceived("\n", function () {
         let serial_str = serial.readString()
+        
+        OLED.writeStringNewLine(serial_str)
+        basic.pause(3000)
+
         if (serial_str.includes("WIFI GOT IP")) {
             if (CMD == 0x01) {
                 wifi_connected = true
@@ -43,6 +51,9 @@ namespace ESP8266_IoT {
                 thingspeak_connected = false
                 control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 2)
             }
+            else if (CMD == 0x03) {
+                control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 3)
+            }
             else if (CMD == 0x04) {
                 kidsiot_connected = false
                 control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 4)
@@ -55,7 +66,7 @@ namespace ESP8266_IoT {
                 control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 7)
             }
         }
-        else if (serial_str.includes("OK")) {
+        else if (serial_str.includes(mqtthost_def)) {
             MQTTbroker_connected = true
             control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 6)
         }
@@ -66,6 +77,12 @@ namespace ESP8266_IoT {
             }
             else if (CMD == 0x04) {
                 control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 4)
+            }
+        }
+        else if (serial_str.includes("IPD")) {
+            if (CMD == 0x03) {
+                receivedData = serial_str
+                control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 3)
             }
         }
         else if (serial_str.includes("Congratu")) {
@@ -85,6 +102,7 @@ namespace ESP8266_IoT {
         else if (serial_str.includes("WIFI DISCONNECT")) {
             wifi_connected = false
         }
+
     })
 
     // write AT command with CR+LF ending
@@ -148,7 +166,7 @@ namespace ESP8266_IoT {
     //% write_api_key.defl=your_write_api_key
     //% expandableArgumentMode="enabled"
     //% subcategory="ThingSpeak" weight=85
-    export function setData(write_api_key: string, n1: number = 0, n2: number = 0, n3: number = 0, n4: number = 0, n5: number = 0, n6: number = 0, n7: number = 0, n8: number = 0) {
+    export function setSendData(write_api_key: string, n1: number = 0, n2: number = 0, n3: number = 0, n4: number = 0, n5: number = 0, n6: number = 0, n7: number = 0, n8: number = 0) {
         TStoSendStr = "GET /update?api_key="
             + write_api_key
             + "&field1="
@@ -185,6 +203,41 @@ namespace ESP8266_IoT {
     //% subcategory="ThingSpeak" weight=65
     export function thingSpeakState(state: boolean) {
         return thingspeak_connected == state
+    }
+
+    /**
+    * Retrieve datafrom ThingSpeak
+    */
+    //% block="Retrieve data from ThingSpeak | Channel ID = %channel_id|Field = %field_id"
+    //% subcategory="ThingSpeak" weight=85
+    export function getData(channel_id: string, field_id: number = 1) {
+        CMD = 0x03
+
+        let GetStr = "GET /channels/"
+            + channel_id
+            + "/fields/"
+            + field_id
+            + "/last.txt"
+        sendAT("AT+CIPSEND=" + (GetStr.length + 2), 500)
+        sendAT(GetStr, 300) // upload data
+        control.waitForEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 3)
+
+        OLED.clear()
+        OLED.writeStringNewLine("Calculating...")
+        let startOfDataLength = receivedData.indexOf(",")
+        OLED.writeNumNewLine(startOfDataLength)
+
+        let startOfData = receivedData.indexOf(":")
+        OLED.writeNumNewLine(startOfData)
+
+        let dataLength = receivedData.substr(startOfDataLength+1, startOfData- startOfDataLength - 1)
+        OLED.writeStringNewLine(dataLength)
+
+        let dataLengthInt = parseInt(dataLength, 10)
+        let extractedData = receivedData.substr(startOfData+1, dataLengthInt)
+        OLED.writeStringNewLine(extractedData)
+
+        return extractedData
     }
     /*-----------------------------------kidsiot---------------------------------*/
     /**
