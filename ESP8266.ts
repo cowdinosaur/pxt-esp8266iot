@@ -55,7 +55,7 @@ namespace ESP8266_IoT {
                 control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 7)
             }
         }
-        else if (serial_str.includes(mqtthost_def)) {
+        else if (serial_str.includes("OK")) {
             MQTTbroker_connected = true
             control.raiseEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 6)
         }
