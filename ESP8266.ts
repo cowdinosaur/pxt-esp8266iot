@@ -1,8 +1,6 @@
 //% color=#0fbc11 icon="\uf1eb"
 namespace ESP8266_IoT {
 
-    OLED.init(128, 64)
-
     let CMD = 0
     let wifi_connected: boolean = false
     let thingspeak_connected: boolean = false
@@ -27,9 +25,6 @@ namespace ESP8266_IoT {
     let TStoSendStr = ""
     serial.onDataReceived("\n", function () {
         let serial_str = serial.readString()
-        
-        OLED.writeStringNewLine(serial_str)
-        basic.pause(3000)
 
         if (serial_str.includes("WIFI GOT IP")) {
             if (CMD == 0x01) {
@@ -222,20 +217,19 @@ namespace ESP8266_IoT {
         sendAT(GetStr, 300) // upload data
         control.waitForEvent(EventBusSource.MES_BROADCAST_GENERAL_ID, 3)
 
-        OLED.clear()
-        OLED.writeStringNewLine("Calculating...")
+      //OLED.writeStringNewLine("Calculating...")
         let startOfDataLength = receivedData.indexOf(",")
-        OLED.writeNumNewLine(startOfDataLength)
+      //OLED.writeNumNewLine(startOfDataLength)
 
         let startOfData = receivedData.indexOf(":")
-        OLED.writeNumNewLine(startOfData)
+      //OLED.writeNumNewLine(startOfData)
 
         let dataLength = receivedData.substr(startOfDataLength+1, startOfData- startOfDataLength - 1)
-        OLED.writeStringNewLine(dataLength)
+      //OLED.writeStringNewLine(dataLength)
 
         let dataLengthInt = parseInt(dataLength, 10)
         let extractedData = receivedData.substr(startOfData+1, dataLengthInt)
-        OLED.writeStringNewLine(extractedData)
+      //OLED.writeStringNewLine(extractedData)
 
         return extractedData
     }
